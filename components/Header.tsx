@@ -1,53 +1,63 @@
-import React from 'react';
-import { Search, Bell, Plus } from 'lucide-react';
-import { Button } from './ui/Button';
-import { CURRENT_USER } from '../constants';
-import { useLocation } from 'react-router-dom';
-
-export const Header: React.FC = () => {
+import { useLocation, useNavigate } from "react-router-dom";
+import { useWorkspace } from "../workspace";
+export function Header({ openMenu }: { openMenu: () => void }) {
+  const { data, email, search, setSearch } = useWorkspace();
+  const navigate = useNavigate();
   const location = useLocation();
-  
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/': return 'Dashboard';
-      case '/pipeline': return 'Pipeline';
-      case '/leads': return 'Leads';
-      case '/billing': return 'Billing';
-      case '/settings': return 'Settings';
-      default: return 'GlassCRM';
-    }
-  };
-
   return (
-    <header className="h-18 sticky top-0 bg-[#F9FAFB] border-b border-gray-200 z-20 px-8 flex items-center justify-between py-4">
-      <div className="flex items-center gap-4">
-        <h1 className="text-base font-medium text-gray-500">
-          Workspace <span className="mx-2 text-gray-300">/</span> <span className="text-gray-900">{getPageTitle()}</span>
-        </h1>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="relative hidden md:block group mr-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search..." 
-            className="h-10 pl-10 pr-4 bg-white border border-gray-200 rounded-md text-base text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 w-72 transition-all"
-          />
+    <header className="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4 flex flex-wrap items-center gap-3">
+      <button
+        className="btn md:hidden"
+        onClick={openMenu}
+        id="open-navigation"
+        aria-controls="workspace-navigation"
+        aria-label="Open navigation"
+      >
+        ☰
+      </button>
+      <h1 className="font-semibold flex-1">{data.settings.workspaceName}</h1>
+      <label className="w-full sm:w-60">
+        Search leads and deals
+        <input
+          aria-label="Search leads and deals"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            if (!["/leads", "/pipeline"].includes(location.pathname))
+              navigate("/leads");
+          }}
+          type="search"
+        />
+      </label>
+      <button
+        className="btn"
+        onClick={() => {
+          setSearch("");
+          navigate("/leads?new=1");
+        }}
+      >
+        New lead
+      </button>
+      <details className="relative">
+        <summary className="cursor-pointer">Activity</summary>
+        <div className="absolute right-0 top-8 card w-72 max-h-80 overflow-y-auto shadow-xl">
+          <p className="text-sm break-all">Signed in as {email}</p>
+          <ul className="divide-y">
+            {data.events.length ? (
+              data.events.map((event) => (
+                <li className="py-2 text-sm" key={event.id}>
+                  {event.action}
+                  <time className="block text-xs" dateTime={event.timestamp}>
+                    {new Date(event.timestamp).toLocaleString()}
+                  </time>
+                </li>
+              ))
+            ) : (
+              <li>No activity yet.</li>
+            )}
+          </ul>
         </div>
-
-        <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-          <Bell size={20} />
-        </button>
-
-        <Button size="sm" icon={<Plus size={16}/>} className="hidden sm:flex h-9 text-sm">
-          New
-        </Button>
-
-        <div className="h-9 w-9 rounded-full bg-gray-200 ring-2 ring-white cursor-pointer overflow-hidden ml-2">
-             <img src={CURRENT_USER.avatarUrl} alt={CURRENT_USER.name} className="w-full h-full object-cover grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" />
-        </div>
-      </div>
+      </details>
     </header>
   );
-};
+}
