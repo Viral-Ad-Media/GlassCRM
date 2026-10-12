@@ -1,59 +1,101 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Kanban, Users, Settings, CreditCard, LogOut, Command } from 'lucide-react';
-
-export const Sidebar: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const navItems = [
-    { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/' },
-    { label: 'Pipeline', icon: <Kanban size={18} />, path: '/pipeline' },
-    { label: 'Leads', icon: <Users size={18} />, path: '/leads' },
-    { label: 'Billing', icon: <CreditCard size={18} />, path: '/billing' },
-    { label: 'Settings', icon: <Settings size={18} />, path: '/settings' },
-  ];
-
-  return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-[#F9FAFB] border-r border-gray-200 z-30 flex flex-col">
-      <div className="p-6 flex items-center gap-3 mb-4">
-        <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center text-white">
-          <Command size={16} />
-        </div>
-        <span className="font-semibold text-lg tracking-tight text-gray-900">GlassCRM</span>
-      </div>
-
-      <nav className="flex-1 px-4 space-y-1">
-        <div className="px-3 mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wider">
-          Workspace
-        </div>
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-md text-base transition-all duration-200 ${
-                isActive 
-                  ? 'bg-gray-100 text-gray-900 font-medium' 
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'
-              }`}
-            >
-              <span className={isActive ? 'text-gray-900' : 'text-gray-400'}>
-                {item.icon}
-              </span>
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="p-5 border-t border-gray-200">
-        <button className="flex items-center gap-3.5 w-full px-3 py-2 text-base font-medium text-gray-500 hover:text-gray-900 transition-colors">
-          <LogOut size={18} />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+import { NavLink } from "react-router-dom";
+import { useWorkspace } from "../workspace";
+import { useState, useEffect, useRef } from "react";
+export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
+  const { logout } = useWorkspace();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const aside = useRef<HTMLElement>(null);
+  const [small, setSmall] = useState(
+    () => window.matchMedia("(max-width: 767px)").matches,
   );
-};
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setSmall(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    aside.current?.querySelector<HTMLElement>("button")?.focus();
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        document.getElementById("open-navigation")?.focus();
+      }
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [open, close]);
+  return (
+    <>
+      {open && (
+        <button
+          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          aria-label="Close navigation"
+          onClick={close}
+        />
+      )}
+      <aside
+        ref={aside}
+        inert={small && !open}
+        id="workspace-navigation"
+        aria-label="Workspace navigation"
+        className={`fixed inset-y-0 left-0 w-64 card rounded-none z-40 flex flex-col transition-transform ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+      >
+        <div className="flex justify-between">
+          <span className="text-xl font-bold">GlassCRM</span>
+          <button
+            className="md:hidden"
+            onClick={close}
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
+        </div>
+        <nav className="flex-1 space-y-2 mt-8">
+          {[
+            ["/", "Dashboard"],
+            ["/pipeline", "Pipeline"],
+            ["/leads", "Leads"],
+            ["/billing", "Capabilities"],
+            ["/settings", "Settings"],
+          ].map(([path, label]) => (
+            <NavLink
+              key={path}
+              to={path!}
+              end
+              onClick={close}
+              className={({ isActive }) =>
+                `block p-3 rounded ${isActive ? "bg-slate-200 dark:bg-slate-700 font-semibold" : "hover:bg-slate-100 dark:hover:bg-slate-800"}`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await logout();
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Sign out
+        </button>
+      </aside>
+    </>
+  );
+}

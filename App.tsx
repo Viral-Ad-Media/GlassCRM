@@ -1,42 +1,47 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
-import { Dashboard } from './pages/Dashboard';
-import { Pipeline } from './pages/Pipeline';
-import { Leads } from './pages/Leads';
-import { Settings } from './pages/Settings';
-import { Billing } from './pages/Billing';
-
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+import { lazy, Suspense, useState } from "react";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Sidebar } from "./components/Sidebar";
+import { Header } from "./components/Header";
+import { WorkspaceProvider } from "./workspace";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Pipeline = lazy(() => import("./pages/Pipeline"));
+const Leads = lazy(() => import("./pages/Leads"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Billing = lazy(() => import("./pages/Billing"));
+export default function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="min-h-screen font-sans text-gray-900 bg-[#F9FAFB] flex">
-      <Sidebar />
-      <div className="flex-1 ml-60 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <HashRouter>
+      <WorkspaceProvider>
+        <div className="min-h-screen">
+          <a
+            className="sr-only focus:not-sr-only focus:fixed focus:z-50 btn"
+            href="#main"
+            onClick={(event) => {
+              event.preventDefault();
+              document.getElementById("main")?.focus();
+            }}
+          >
+            Skip to content
+          </a>
+          <Sidebar open={menuOpen} close={() => setMenuOpen(false)} />
+          <div className="md:ml-64">
+            <Header openMenu={() => setMenuOpen(true)} />
+            <main id="main" tabIndex={-1} className="p-4 sm:p-8">
+              <Suspense fallback={<p role="status">Loading page…</p>}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/pipeline" element={<Pipeline />} />
+                  <Route path="/leads" element={<Leads />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/billing" element={<Billing />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </main>
+          </div>
+        </div>
+      </WorkspaceProvider>
+    </HashRouter>
   );
-};
-
-const App: React.FC = () => {
-  return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/pipeline" element={<Pipeline />} />
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </Router>
-  );
-};
-
-export default App;
+}

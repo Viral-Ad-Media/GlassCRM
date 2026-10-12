@@ -1,79 +1,173 @@
-import React from 'react';
-import { MOCK_LEADS } from '../constants';
-import { Card } from '../components/ui/Card';
-import { Mail, MoreHorizontal, Filter, Download } from 'lucide-react';
-import { Button } from '../components/ui/Button';
-
-export const Leads: React.FC = () => {
-  const getStatusStyle = (status: string) => {
-     switch(status) {
-         case 'New': return 'text-blue-600 bg-blue-50 border-blue-100';
-         case 'Qualified': return 'text-emerald-600 bg-emerald-50 border-emerald-100';
-         case 'Contacted': return 'text-purple-600 bg-purple-50 border-purple-100';
-         default: return 'text-gray-600 bg-gray-100 border-gray-200';
-     }
-  }
-
-  return (
-    <div className="p-8 max-w-[1600px] mx-auto space-y-8">
-      <div className="flex justify-between items-end">
-        <div>
-           <h2 className="text-3xl font-semibold text-gray-900 tracking-tight">Leads</h2>
-           <p className="text-lg text-gray-500 mt-2">Manage and track your potential customers.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="md" icon={<Filter size={16}/>}>Filter</Button>
-          <Button variant="secondary" size="md" icon={<Download size={16}/>}>Export</Button>
-        </div>
-      </div>
-
-      <Card noPadding className="overflow-hidden shadow-sm border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-sm font-medium text-gray-500 bg-gray-50/50">
-                <th className="px-6 py-4 font-medium">Name</th>
-                <th className="px-6 py-4 font-medium">Company</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Value</th>
-                <th className="px-6 py-4 font-medium">Email</th>
-                <th className="px-6 py-4 font-medium text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {MOCK_LEADS.map((lead) => (
-                <tr key={lead.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-600">
-                        {lead.name.charAt(0)}
-                      </div>
-                      <span className="text-base font-medium text-gray-900">{lead.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-base text-gray-600">{lead.company}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-medium ${getStatusStyle(lead.status)}`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-base text-gray-600 font-medium">
-                    {lead.value ? `$${lead.value.toLocaleString()}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-base text-gray-500">
-                      {lead.email}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-gray-300 hover:text-gray-900 p-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
-                      <MoreHorizontal size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useWorkspace } from "../workspace";
+import { Editor } from "../components/Editor";
+import { currency, type Lead } from "../shared";
+export function csvCell(value: string | number) {
+  const text = String(value);
+  return `"${(/^[\s]*[=+\-@\t\r]/.test(text) ? "'" + text : text).replaceAll('"', '""')}"`;
+}
+export default function Leads() {
+  const { data, search, mutate } = useWorkspace();
+  const [status, setStatus] = useState("All");
+  const [page, setPage] = useState(1);
+  const [editor, setEditor] = useState<Lead | "new" | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("new") === "1") {
+      setEditor("new");
+      setParams({}, { replace: true });
+    }
+  }, [params, setParams]);
+  useEffect(() => {
+    setPage(1);
+  }, [search, status]);
+  const filtered = data.leads.filter(
+    (l) =>
+      (status === "All" || l.status === status) &&
+      `${l.name} ${l.company} ${l.email}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
-};
+  const pages = Math.max(1, Math.ceil(filtered.length / 20));
+  const current = Math.min(page, pages);
+  const exportCsv = () => {
+    const rows = [
+      ["Name", "Company", "Email", "Status", "Value (USD)"],
+      ...filtered.map((l) => [l.name, l.company, l.email, l.status, l.value]),
+    ];
+    const url = URL.createObjectURL(
+      new Blob(
+        ["\uFEFF" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n")],
+        { type: "text/csv;charset=utf-8" },
+      ),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "glasscrm-leads.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-2xl font-semibold flex-1">Leads</h2>
+        <button className="btn" onClick={() => setEditor("new")}>
+          Add lead
+        </button>
+        <button className="btn" onClick={exportCsv} disabled={!filtered.length}>
+          Export filtered leads
+        </button>
+      </div>
+      <label className="block max-w-xs">
+        Filter by status
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          {["All", "New", "Contacted", "Qualified", "Unqualified"].map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+      </label>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <div className="card overflow-x-auto">
+        <table className="w-full text-left">
+          <caption className="sr-only">Workspace leads</caption>
+          <thead>
+            <tr>
+              {["Name", "Company", "Status", "Value", "Email", "Actions"].map(
+                (s) => (
+                  <th scope="col" className="p-3" key={s}>
+                    {s}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.slice((current - 1) * 20, current * 20).map((l) => (
+              <tr
+                key={l.id}
+                className="border-t border-slate-200 dark:border-slate-700"
+              >
+                <td className="p-3">{l.name}</td>
+                <td className="p-3">{l.company}</td>
+                <td className="p-3">{l.status}</td>
+                <td className="p-3 whitespace-nowrap">{currency(l.value)}</td>
+                <td className="p-3">{l.email}</td>
+                <td className="p-3">
+                  <div className="flex gap-2">
+                    <button
+                      className="btn"
+                      onClick={() => setEditor(l)}
+                      aria-label={`Edit ${l.name}`}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn"
+                      disabled={busy}
+                      aria-label={`Delete ${l.name}`}
+                      onClick={async () => {
+                        if (
+                          !confirm(`Delete ${l.name}? This cannot be undone.`)
+                        )
+                          return;
+                        setError("");
+                        setBusy(true);
+                        try {
+                          await mutate(`leads/${l.id}`, "DELETE");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!filtered.length && (
+          <p className="py-5">
+            No leads match. Add a lead or change your search.
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        <button
+          className="btn"
+          disabled={current === 1}
+          onClick={() => setPage(current - 1)}
+        >
+          Previous
+        </button>
+        <span>
+          Page {current} of {pages} · {filtered.length} leads
+        </span>
+        <button
+          className="btn"
+          disabled={current === pages}
+          onClick={() => setPage(current + 1)}
+        >
+          Next
+        </button>
+      </div>
+      {editor && (
+        <Editor
+          kind="leads"
+          record={editor === "new" ? undefined : editor}
+          close={() => setEditor(null)}
+        />
+      )}
+    </section>
+  );
+}

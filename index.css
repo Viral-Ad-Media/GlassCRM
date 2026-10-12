@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased;
+  }
+  input:not([type="checkbox"]),
+  select,
+  textarea {
+    @apply block w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 mt-1 text-base;
+  }
+  button,
+  a,
+  input,
+  select,
+  summary {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600;
+  }
+  button:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+}
+@layer components {
+  .card {
+    @apply bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-5;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 px-4 py-2 text-sm font-medium;
+  }
+  .error {
+    @apply text-red-700 dark:text-red-300;
+  }
+}
