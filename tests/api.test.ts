@@ -1,13 +1,12 @@
+import { hashPassword } from "better-auth/crypto";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { database, testSecret } from "./helpers.js";
 import { once } from "node:events";
 import type { Snapshot } from "../shared.js";
 test("API protects data, validates mutations, rejects cross-origin writes, and revokes logout sessions", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "glasscrm-api-"));
+  const db = await database();
   const origin = "http://localhost:3219";
   const child = spawn(
     process.execPath,
@@ -19,7 +18,8 @@ test("API protects data, validates mutations, rejects cross-origin writes, and r
         CRM_ORIGIN: origin,
         CRM_ADMIN_EMAIL: "admin@example.com",
         CRM_ADMIN_PASSWORD: "testing-password-123",
-        CRM_DB_PATH: join(dir, "test.sqlite"),
+        DATABASE_URL: db.connectionString,
+        BETTER_AUTH_SECRET: testSecret,
         NODE_ENV: "test",
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -61,22 +61,62 @@ test("API protects data, validates mutations, rejects cross-origin writes, and r
     assert.equal((await request("workspace")).status, 401);
     assert.equal(
       (
-        await request("login", "POST", {
+        await request("auth/sign-in/email", "POST", {
           email: "admin@example.com",
           password: "wrong",
         })
       ).status,
       401,
     );
-    const login = await request("login", "POST", {
+    const login = await request("auth/sign-in/email", "POST", {
       email: "admin@example.com",
       password: "testing-password-123",
     });
     assert.equal(login.status, 200);
-    cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    cookie = login.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0]!)
+      .join("; ");
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/);
     assert.match(login.headers.get("set-cookie")!, /SameSite=Strict/);
     assert.equal((await request("workspace")).status, 200);
+    assert.equal(
+      (
+        await request("auth/sign-up/email", "POST", {
+          name: "Intruder",
+          email: "other@example.com",
+          password: "intruder-password-123",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      Number(
+        (await db.pool.query('SELECT count(*) FROM "user"')).rows[0].count,
+      ),
+      1,
+    );
+    const restrictedHash = await hashPassword("restricted-user-password");
+    await db.pool.query(
+      'INSERT INTO "user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$2,$3,false,now(),now())',
+      ["restricted-user", "Restricted", "restricted@example.com"],
+    );
+    await db.pool.query(
+      'INSERT INTO account(id,"accountId","providerId","userId",password,"createdAt","updatedAt") VALUES($1,$2,$3,$2,$4,now(),now())',
+      ["restricted-account", "restricted-user", "credential", restrictedHash],
+    );
+    const administratorCookie = cookie;
+    const restrictedLogin = await request("auth/sign-in/email", "POST", {
+      email: "restricted@example.com",
+      password: "restricted-user-password",
+    });
+    assert.equal(restrictedLogin.status, 200);
+    cookie = restrictedLogin.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0]!)
+      .join("; ");
+    assert.equal((await request("workspace")).status, 403);
+    cookie = administratorCookie;
     const lead = {
       name: "API Alice",
       company: "Acme",
@@ -117,20 +157,24 @@ test("API protects data, validates mutations, rejects cross-origin writes, and r
     assert.equal(response.status, 200);
     assert.equal((await request(`deals/${dealId}`, "DELETE")).status, 200);
     assert.equal((await request(`leads/${leadId}`, "DELETE")).status, 200);
-    assert.equal((await request("logout", "POST", {})).status, 200);
+    assert.equal((await request("auth/sign-out", "POST", {})).status, 200);
     assert.equal((await request("workspace")).status, 401);
-    const beforeReset = await request("login", "POST", {
+    const beforeReset = await request("auth/sign-in/email", "POST", {
       email: "admin@example.com",
       password: "testing-password-123",
     });
-    cookie = beforeReset.headers.get("set-cookie")!.split(";")[0]!;
+    cookie = beforeReset.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0]!)
+      .join("; ");
     const reset = spawn(
       process.execPath,
       ["--import", "tsx", "server/reset-password.ts"],
       {
         env: {
           ...process.env,
-          CRM_DB_PATH: join(dir, "test.sqlite"),
+          DATABASE_URL: db.connectionString,
+          BETTER_AUTH_SECRET: testSecret,
           CRM_ADMIN_PASSWORD: "rotated-test-password",
         },
         stdio: "ignore",
@@ -141,24 +185,28 @@ test("API protects data, validates mutations, rejects cross-origin writes, and r
     assert.equal((await request("workspace")).status, 401);
     assert.equal(
       (
-        await request("login", "POST", {
+        await request("auth/sign-in/email", "POST", {
           email: "admin@example.com",
           password: "testing-password-123",
         })
       ).status,
       401,
     );
-    const afterReset = await request("login", "POST", {
+    const afterReset = await request("auth/sign-in/email", "POST", {
       email: "admin@example.com",
       password: "rotated-test-password",
     });
     assert.equal(afterReset.status, 200);
-    cookie = afterReset.headers.get("set-cookie")!.split(";")[0]!;
-    assert.equal((await request("logout", "POST", {})).status, 200);
+    cookie = afterReset.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0]!)
+      .join("; ");
+    assert.equal((await request("auth/sign-out", "POST", {})).status, 200);
+    await db.pool.query('DELETE FROM "rateLimit"');
     for (let i = 0; i < 10; i++)
       assert.equal(
         (
-          await request("login", "POST", {
+          await request("auth/sign-in/email", "POST", {
             email: "admin@example.com",
             password: "bad",
           })
@@ -167,16 +215,19 @@ test("API protects data, validates mutations, rejects cross-origin writes, and r
       );
     assert.equal(
       (
-        await request("login", "POST", {
+        await request("auth/sign-in/email", "POST", {
           email: "admin@example.com",
           password: "bad",
         })
       ).status,
       429,
     );
+  } catch (error) {
+    console.error("API assertion failed", error);
+    throw error;
   } finally {
     child.kill("SIGTERM");
     await once(child, "exit");
-    rmSync(dir, { recursive: true, force: true });
+    await db.close();
   }
 });

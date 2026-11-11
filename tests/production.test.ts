@@ -1,12 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { database, testSecret } from "./helpers.js";
 import { once } from "node:events";
 test("production serves bundled assets, adds security headers, and marks the session cookie secure", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "glasscrm-production-"));
+  const db = await database();
   const child = spawn(
     process.execPath,
     ["--import", "tsx", "server/index.ts"],
@@ -17,7 +15,8 @@ test("production serves bundled assets, adds security headers, and marks the ses
         CRM_ORIGIN: "https://crm.example.com",
         CRM_ADMIN_EMAIL: "admin@example.com",
         CRM_ADMIN_PASSWORD: "production-test-password",
-        CRM_DB_PATH: join(dir, "test.sqlite"),
+        DATABASE_URL: db.connectionString,
+        BETTER_AUTH_SECRET: testSecret,
         NODE_ENV: "production",
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -55,7 +54,7 @@ test("production serves bundled assets, adds security headers, and marks the ses
       (await fetch("http://localhost:3220/server/index.ts")).status,
       404,
     );
-    const login = await fetch("http://localhost:3220/api/login", {
+    const login = await fetch("http://localhost:3220/api/auth/sign-in/email", {
       method: "POST",
       headers: {
         Origin: "https://crm.example.com",
@@ -71,6 +70,6 @@ test("production serves bundled assets, adds security headers, and marks the ses
   } finally {
     child.kill("SIGTERM");
     await once(child, "exit");
-    rmSync(dir, { recursive: true, force: true });
+    await db.close();
   }
 });
