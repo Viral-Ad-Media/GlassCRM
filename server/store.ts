@@ -1,106 +1,136 @@
-import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
+import type { Pool, PoolClient } from "pg";
+import { transaction } from "./database.js";
 import {
   defaultSettings,
   type Snapshot,
+  type Lead,
+  type Deal,
   type LeadInput,
   type DealInput,
   type Settings,
 } from "../shared.js";
 export class Store {
-  readonly db: DatabaseSync;
-  constructor(filename: string) {
-    this.db = new DatabaseSync(filename);
-    this.db.exec(`PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;
-      CREATE TABLE IF NOT EXISTS records (id TEXT PRIMARY KEY, kind TEXT NOT NULL, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS admin (id INTEGER PRIMARY KEY CHECK(id=1), email TEXT NOT NULL, password TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, action TEXT NOT NULL, timestamp TEXT NOT NULL);`);
-    if (!this.db.prepare("SELECT id FROM records WHERE id=?").get("settings"))
-      this.db
-        .prepare("INSERT INTO records VALUES (?, ?, ?)")
-        .run("settings", "settings", JSON.stringify(defaultSettings));
+  constructor(readonly pool: Pool) {}
+  async event(action: string, client: Pool | PoolClient = this.pool) {
+    await client.query(
+      "INSERT INTO crm_events(id,action,timestamp) VALUES($1,$2,$3)",
+      [randomUUID(), action, new Date().toISOString()],
+    );
   }
-  event(action: string) {
-    this.db
-      .prepare("INSERT INTO events VALUES (?, ?, ?)")
-      .run(randomUUID(), action, new Date().toISOString());
+  async authorize(userId: string) {
+    return (
+      (
+        await this.pool.query(
+          "SELECT 1 FROM crm_administrator WHERE user_id=$1",
+          [userId],
+        )
+      ).rowCount === 1
+    );
   }
-  private transaction<T>(operation: () => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+  async snapshot(): Promise<Snapshot> {
+    const [leads, deals, settings, events] = await Promise.all([
+      this.pool.query<{ data: Lead }>(
+        "SELECT data FROM crm_leads ORDER BY created_at,id",
+      ),
+      this.pool.query<{ data: Deal }>(
+        "SELECT data FROM crm_deals ORDER BY created_at,id",
+      ),
+      this.pool.query<{ data: Settings }>(
+        "SELECT data FROM crm_settings WHERE id=1",
+      ),
+      this.pool.query<Snapshot["events"][number]>(
+        "SELECT id,action,timestamp FROM crm_events ORDER BY timestamp DESC,id DESC LIMIT 50",
+      ),
+    ]);
+    return {
+      leads: leads.rows.map((r) => r.data),
+      deals: deals.rows.map((r) => r.data),
+      settings: settings.rows[0]?.data ?? defaultSettings,
+      events: events.rows.map((e) => ({
+        ...e,
+        timestamp: new Date(e.timestamp).toISOString(),
+      })),
+    };
+  }
+  async save(
+    kind: "leads" | "deals",
+    input: LeadInput | DealInput,
+    id?: string,
+  ) {
+    return transaction(this.pool, async (client) => {
+      const table = kind === "leads" ? "crm_leads" : "crm_deals";
+      const old = id
+        ? (
+            await client.query<{ data: Lead | Deal }>(
+              `SELECT data FROM ${table} WHERE id=$1 FOR UPDATE`,
+              [id],
+            )
+          ).rows[0]?.data
+        : undefined;
+      if (id && !old) throw new Error("Record not found");
+      if (
+        kind === "deals" &&
+        !(
+          await client.query(
+            "SELECT id FROM crm_leads WHERE id=$1 FOR KEY SHARE",
+            [(input as DealInput).leadId],
+          )
+        ).rowCount
+      )
+        throw new Error("Select an existing lead");
+      const now = new Date().toISOString();
+      const data = {
+        ...input,
+        id: id ?? randomUUID(),
+        createdAt: old?.createdAt ?? now,
+        updatedAt: now,
+      };
+      if (kind === "leads")
+        await client.query(
+          "INSERT INTO crm_leads(id,data,created_at) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET data=excluded.data",
+          [data.id, data, data.createdAt],
+        );
+      else
+        await client.query(
+          "INSERT INTO crm_deals(id,lead_id,data,created_at) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET lead_id=excluded.lead_id,data=excluded.data",
+          [data.id, (input as DealInput).leadId, data, data.createdAt],
+        );
+      await this.event(
+        `${old ? "Updated" : "Created"} ${kind === "leads" ? "lead" : "deal"}: ${kind === "leads" ? (input as LeadInput).name : (input as DealInput).title}`,
+        client,
+      );
+      return data;
+    });
+  }
+  async remove(kind: "leads" | "deals", id: string) {
     try {
-      const result = operation();
-      this.db.exec("COMMIT");
-      return result;
+      await transaction(this.pool, async (client) => {
+        const table = kind === "leads" ? "crm_leads" : "crm_deals";
+        const result = await client.query(`DELETE FROM ${table} WHERE id=$1`, [
+          id,
+        ]);
+        if (!result.rowCount) throw new Error("Record not found");
+        await this.event(
+          `Deleted ${kind === "leads" ? "lead" : "deal"} ${id}`,
+          client,
+        );
+      });
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      if (
+        kind === "leads" &&
+        ["23503", "23001"].includes((error as { code?: string }).code ?? "")
+      )
+        throw new Error("Delete linked deals before deleting this lead", {
+          cause: error,
+        });
       throw error;
     }
   }
-  snapshot(): Snapshot {
-    const rows = this.db.prepare("SELECT kind, data FROM records").all() as {
-      kind: string;
-      data: string;
-    }[];
-    return {
-      leads: rows
-        .filter((r) => r.kind === "leads")
-        .map((r) => JSON.parse(r.data)),
-      deals: rows
-        .filter((r) => r.kind === "deals")
-        .map((r) => JSON.parse(r.data)),
-      settings: JSON.parse(rows.find((r) => r.kind === "settings")!.data),
-      events: this.db
-        .prepare(
-          "SELECT * FROM events ORDER BY timestamp DESC, rowid DESC LIMIT 50",
-        )
-        .all() as Snapshot["events"],
-    };
-  }
-  save(kind: "leads" | "deals", input: LeadInput | DealInput, id?: string) {
-    const snapshot = this.snapshot();
-    const old = id ? snapshot[kind].find((r) => r.id === id) : undefined;
-    if (id && !old) throw new Error("Record not found");
-    if (
-      kind === "deals" &&
-      !snapshot.leads.some((l) => l.id === (input as DealInput).leadId)
-    )
-      throw new Error("Select an existing lead");
-    const data = {
-      ...input,
-      id: id ?? randomUUID(),
-      createdAt: old?.createdAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.transaction(() => {
-      this.db
-        .prepare("INSERT OR REPLACE INTO records VALUES (?, ?, ?)")
-        .run(data.id, kind, JSON.stringify(data));
-      this.event(
-        `${old ? "Updated" : "Created"} ${kind === "leads" ? "lead" : "deal"}: ${kind === "leads" ? (input as LeadInput).name : (input as DealInput).title}`,
-      );
-    });
-    return data;
-  }
-  remove(kind: "leads" | "deals", id: string) {
-    const snapshot = this.snapshot();
-    if (!snapshot[kind].some((r) => r.id === id))
-      throw new Error("Record not found");
-    if (kind === "leads" && snapshot.deals.some((d) => d.leadId === id))
-      throw new Error("Delete linked deals before deleting this lead");
-    this.transaction(() => {
-      this.db
-        .prepare("DELETE FROM records WHERE id=? AND kind=?")
-        .run(id, kind);
-      this.event(`Deleted ${kind === "leads" ? "lead" : "deal"} ${id}`);
-    });
-  }
-  settings(input: Settings) {
-    this.transaction(() => {
-      this.db
-        .prepare("UPDATE records SET data=? WHERE id=?")
-        .run(JSON.stringify(input), "settings");
-      this.event("Updated workspace settings");
+  async settings(input: Settings) {
+    await transaction(this.pool, async (client) => {
+      await client.query("UPDATE crm_settings SET data=$1 WHERE id=1", [input]);
+      await this.event("Updated workspace settings", client);
     });
   }
 }

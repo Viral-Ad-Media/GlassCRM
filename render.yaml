@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: glasscrm
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "24"
+      - key: CRM_HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: CRM_ADMIN_EMAIL
+        sync: false
+      - key: CRM_ADMIN_PASSWORD
+        sync: false

@@ -1,28 +1,32 @@
-import { resolve } from "node:path";
-import { existsSync } from "node:fs";
-import { Store } from "./store.js";
-import { passwordHash } from "./password.js";
-const filename = resolve(process.env.CRM_DB_PATH ?? "data/crm.sqlite");
-if (!existsSync(filename))
-  throw new Error("Database does not exist; start the server first");
+import { hashPassword } from "better-auth/crypto";
+import { runtime } from "./runtime.js";
+import { transaction } from "./database.js";
 const password = process.env.CRM_ADMIN_PASSWORD;
-if (!password) throw new Error("Set CRM_ADMIN_PASSWORD to the new password");
-const hash = passwordHash(password);
-const store = new Store(filename);
+if (!password || password.length < 12 || password.length > 1024)
+  throw new Error("Set a new 12–1024 character CRM_ADMIN_PASSWORD");
+const { pool } = runtime();
 try {
-  if (!store.db.prepare("SELECT id FROM admin WHERE id=1").get())
-    throw new Error("Administrator account does not exist");
-  store.db.exec("BEGIN IMMEDIATE");
-  try {
-    store.db.prepare("UPDATE admin SET password=? WHERE id=1").run(hash);
-    store.db.exec("DELETE FROM sessions");
-    store.event("Administrator password reset; all sessions revoked");
-    store.db.exec("COMMIT");
-  } catch (error) {
-    store.db.exec("ROLLBACK");
-    throw error;
-  }
+  const hash = await hashPassword(password);
+  await transaction(pool, async (client) => {
+    const admin = (
+      await client.query<{ user_id: string }>(
+        "SELECT user_id FROM crm_administrator WHERE id=1 FOR UPDATE",
+      )
+    ).rows[0];
+    if (!admin) throw new Error("Administrator account does not exist");
+    await client.query(
+      'UPDATE account SET password=$1,"updatedAt"=now() WHERE "userId"=$2 AND "providerId"=$3',
+      [hash, admin.user_id, "credential"],
+    );
+    await client.query('DELETE FROM session WHERE "userId"=$1', [
+      admin.user_id,
+    ]);
+    await client.query(
+      "INSERT INTO crm_events(id,action,timestamp) VALUES(gen_random_uuid(),$1,now())",
+      ["Administrator password reset; all sessions revoked"],
+    );
+  });
   console.log("Administrator password updated; all sessions revoked");
 } finally {
-  store.db.close();
+  await pool.end();
 }

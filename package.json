@@ -16,10 +16,14 @@
     "lint": "eslint .",
     "admin:reset-password": "node --import tsx server/reset-password.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "node --import tsx server/migrate-cli.ts",
+    "db:import-sqlite": "node --import tsx server/import-sqlite.ts"
   },
   "dependencies": {
+    "better-auth": "^1.7.20",
     "lucide-react": "^0.555.0",
+    "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6",
@@ -32,9 +36,11 @@
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.14.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "embedded-postgres": "^18.6.0-beta.19",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
@@ -46,5 +52,8 @@
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

@@ -25,17 +25,9 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: "npm start",
+      command: "node --import tsx tests/browser-server.ts",
       url: "http://127.0.0.1:3001/api/health",
       reuseExistingServer: false,
-      env: {
-        CRM_ADMIN_EMAIL: "browser@example.com",
-        CRM_ADMIN_PASSWORD: "browser-test-password",
-        CRM_ORIGIN: "http://127.0.0.1:3000",
-        CRM_DB_PATH: "test-results/browser.sqlite",
-        PORT: "3001",
-        NODE_ENV: "test",
-      },
     },
   ],
 });

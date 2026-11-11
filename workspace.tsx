@@ -1,3 +1,4 @@
+import { authClient } from "./auth-client";
 import {
   createContext,
   useContext,
@@ -60,11 +61,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     window.addEventListener("session-expired", expired);
     void (async () => {
       try {
-        const session = await api<{ email: string }>("session");
+        const session = await authClient.getSession();
+        if (session.error)
+          throw new Error(session.error.message ?? "Unable to check session");
+        if (!session.data) return;
         const snapshot = await api<Snapshot>("workspace");
         if (active) {
           setData(snapshot);
-          setEmail(session.email);
+          setEmail(session.data.user.email);
         }
       } catch (e) {
         if (active && e instanceof Error && e.message !== "Please sign in")
@@ -107,12 +111,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             setError("");
             const form = new FormData(event.currentTarget);
             try {
-              const session = await api<{ email: string }>("login", "POST", {
-                email: form.get("email"),
-                password: form.get("password"),
+              const session = await authClient.signIn.email({
+                email: String(form.get("email")).trim().toLowerCase(),
+                password: String(form.get("password")),
               });
+              if (session.error)
+                throw new Error(
+                  session.error.message ?? "Invalid email or password",
+                );
+              if (!session.data) throw new Error("Sign in failed");
               setData(await api<Snapshot>("workspace"));
-              setEmail(session.email);
+              setEmail(session.data.user.email);
             } catch (e) {
               setError((e as Error).message);
             } finally {
@@ -157,7 +166,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setData(await api<Snapshot>(path, method, value));
         },
         logout: async () => {
-          await api("logout", "POST", {});
+          const result = await authClient.signOut();
+          if (result.error)
+            throw new Error(result.error.message ?? "Sign out failed");
           setEmail(null);
           setSearch("");
           setData({
