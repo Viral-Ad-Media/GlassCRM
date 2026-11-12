@@ -218,3 +218,36 @@
     border-color: var(--color-muted);
   }
 }
+.password-control {
+  position: relative;
+}
+.password-control input {
+  padding-right: var(--space-2xl);
+}
+.password-toggle {
+  position: absolute;
+  right: var(--space-xs);
+  top: 0;
+  min-height: 44px;
+  min-width: 48px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-accent-2);
+  flex: none;
+}
+.admin-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-xs);
+  border-bottom: 1px solid var(--color-rule);
+}
+.admin-facts dd {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

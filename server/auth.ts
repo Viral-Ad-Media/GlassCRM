@@ -36,6 +36,23 @@ export function createAuth(
         },
       },
     },
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session) => ({
+            data: {
+              ...session,
+              expiresAt: new Date(
+                Math.min(
+                  session.expiresAt.getTime(),
+                  Date.now() + 8 * 3600 * 1000,
+                ),
+              ),
+            },
+          }),
+        },
+      },
+    },
     session: {
       expiresIn: 8 * 3600,
       updateAge: 3600,

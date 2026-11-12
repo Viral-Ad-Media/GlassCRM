@@ -7,6 +7,7 @@ import { readFileSync, statSync } from "node:fs";
 import { resolve, extname, sep } from "node:path";
 import { z } from "zod";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+import { SuperadminStore } from "./superadmin.js";
 import { Store } from "./store.js";
 import { runtime } from "./runtime.js";
 import { migrate } from "./migrate.js";
@@ -18,6 +19,7 @@ const { pool, auth, origin } = runtime();
 await migrate(pool, auth);
 await bootstrap(pool);
 const store = new Store(pool);
+const superadmins = new SuperadminStore(pool);
 const handleAuth = toNodeHandler(auth);
 function send(res: ServerResponse, status: number, value: unknown) {
   res.writeHead(status, {
@@ -116,12 +118,57 @@ const server = createServer(async (req, res) => {
       headers: fromNodeHeaders(req.headers),
     });
     if (!session) return send(res, 401, { error: "Please sign in" });
-    if (!(await store.authorize(session.user.id)))
+    const role = await store.role(session.user.id);
+    if (
+      pathname === "/api/superadmin" ||
+      pathname.startsWith("/api/superadmin/")
+    ) {
+      if (role !== "superadmin")
+        return send(res, 403, { error: "Superadmin access required" });
+      if (pathname === "/api/superadmin" && req.method === "GET") {
+        const page = z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(1000000)
+          .parse(new URL(req.url!, origin).searchParams.get("page") ?? "1");
+        return send(
+          res,
+          200,
+          await superadmins.overview(session.user.id, page),
+        );
+      }
+      if (
+        pathname === "/api/superadmin/sessions/revoke" &&
+        req.method === "POST"
+      ) {
+        const input = z
+          .object({ userId: z.string().min(1).max(200) })
+          .strict()
+          .parse(await body(req));
+        return send(
+          res,
+          200,
+          await superadmins.revokeSessions(
+            session.user.id,
+            input.userId,
+            session.session.id,
+          ),
+        );
+      }
+      return send(res, 404, { error: "Not found" });
+    }
+    if (!role)
       return send(res, 403, {
         error: "Workspace access is restricted to its administrator",
       });
     if (pathname === "/api/session" && req.method === "GET")
-      return send(res, 200, { email: session.user.email });
+      return send(res, 200, {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        role,
+      });
     if (pathname === "/api/workspace" && req.method === "GET")
       return send(res, 200, await store.snapshot());
     if (pathname === "/api/settings" && req.method === "PUT") {

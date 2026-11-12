@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useWorkspace } from "../workspace";
 import { useState, useEffect, useRef } from "react";
 export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
-  const { logout } = useWorkspace();
+  const { logout, profile } = useWorkspace();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const aside = useRef<HTMLElement>(null);
@@ -60,6 +60,9 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
             ["/leads", "Leads"],
             ["/billing", "Capabilities"],
             ["/settings", "Settings"],
+            ...(profile.role === "superadmin"
+              ? [["/superadmin", "Superadmin"]]
+              : []),
           ].map(([path, label]) => (
             <NavLink
               key={path}
@@ -67,7 +70,7 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
               end
               onClick={close}
               className={({ isActive }) =>
-                `block p-3 rounded ${isActive ? "bg-subtle font-semibold" : "hover:bg-subtle dark:hover:bg-content"}`
+                `block p-3 rounded ${isActive ? "bg-subtle font-semibold" : "hover:bg-subtle"}`
               }
             >
               {label}

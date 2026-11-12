@@ -86,3 +86,37 @@ export function metrics(deals: Deal[], days: number, now = Date.now()) {
     })),
   };
 }
+
+export type AccessRole = "superadmin" | "administrator";
+export type SessionProfile = {
+  id: string;
+  name: string;
+  email: string;
+  role: AccessRole;
+};
+export type SuperadminUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  role: AccessRole | "none";
+  activeSessions: number;
+  lastActiveAt: string | null;
+};
+export type SuperadminOverview = {
+  generatedAt: string;
+  currentUserId: string;
+  workspace: { name: string; supportEmail: string; mode: "single-workspace" };
+  health: { database: "connected"; authentication: "Better Auth" };
+  totals: {
+    users: number;
+    superadmins: number;
+    activeSessions: number;
+    leads: number;
+    deals: number;
+  };
+  users: SuperadminUser[];
+  userPage: number;
+  userPages: number;
+  events: AuditEvent[];
+};

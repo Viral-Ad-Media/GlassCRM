@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "node --import tsx server/migrate-cli.ts",
-    "db:import-sqlite": "node --import tsx server/import-sqlite.ts"
+    "db:import-sqlite": "node --import tsx server/import-sqlite.ts",
+    "admin:provision-superadmin": "node --import tsx server/provision-superadmin.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",

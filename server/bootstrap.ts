@@ -50,5 +50,6 @@ export async function bootstrap(pool: Pool) {
       "INSERT INTO crm_administrator(id,user_id) VALUES(1,$1)",
       [id],
     );
+    await client.query("INSERT INTO crm_superadmins(user_id) VALUES($1)", [id]);
   });
 }

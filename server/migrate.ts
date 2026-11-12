@@ -19,6 +19,12 @@ export async function migrate(pool: Pool, auth: Auth) {
         ),
       );
       await lock.query(
+        await readFile(
+          new URL("../migrations/002-superadmins.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      await lock.query(
         "INSERT INTO crm_settings(id,data) VALUES(1,$1) ON CONFLICT(id) DO NOTHING",
         [defaultSettings],
       );
