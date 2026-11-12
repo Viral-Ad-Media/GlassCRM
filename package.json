@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && vite build && node --import tsx scripts/prerender.tsx",
     "preview": "vite preview",
     "dev:server": "node --env-file=.env.local --import tsx server/index.ts",
     "start": "node --import tsx server/index.ts",
@@ -21,6 +21,7 @@
     "db:import-sqlite": "node --import tsx server/import-sqlite.ts"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "^5.3.0",
     "better-auth": "^1.7.20",
     "lucide-react": "^0.555.0",
     "pg": "^8.23.1",

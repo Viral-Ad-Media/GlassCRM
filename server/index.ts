@@ -58,10 +58,27 @@ const server = createServer(async (req, res) => {
         return send(res, 404, { error: "Use the Vite frontend on port 3000" });
       if (req.method !== "GET" && req.method !== "HEAD")
         return send(res, 405, { error: "Method not allowed" });
+      const routes: Record<string, string> = {
+        "/": "/index.html",
+        "/app": "/app.html",
+        "/app/": "/app.html",
+        "/product": "/product/index.html",
+        "/product/": "/product/index.html",
+        "/pricing": "/pricing/index.html",
+        "/pricing/": "/pricing/index.html",
+        "/contact": "/contact/index.html",
+        "/contact/": "/contact/index.html",
+      };
       const target = resolve(
         dist,
-        `.${decodeURIComponent(pathname === "/" ? "/index.html" : pathname)}`,
+        `.${decodeURIComponent(routes[pathname] ?? pathname)}`,
       );
+      if (
+        pathname === "/app" ||
+        pathname === "/app/" ||
+        pathname === "/app.html"
+      )
+        res.setHeader("X-Robots-Tag", "noindex, nofollow");
       if (
         !target.startsWith(dist + sep) ||
         !statSync(target, { throwIfNoEntry: false })?.isFile()
@@ -73,6 +90,9 @@ const server = createServer(async (req, res) => {
         ".css": "text/css",
         ".svg": "image/svg+xml",
         ".png": "image/png",
+        ".woff2": "font/woff2",
+        ".xml": "application/xml",
+        ".txt": "text/plain",
       };
       res.writeHead(200, {
         "Content-Type": mime[extname(target)] ?? "application/octet-stream",

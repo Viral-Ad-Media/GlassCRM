@@ -27,7 +27,11 @@ export default function App() {
           <Sidebar open={menuOpen} close={() => setMenuOpen(false)} />
           <div className="md:ml-64">
             <Header openMenu={() => setMenuOpen(true)} />
-            <main id="main" tabIndex={-1} className="p-4 sm:p-8">
+            <main
+              id="main"
+              tabIndex={-1}
+              className="p-4 sm:p-8 max-w-[1600px] mx-auto"
+            >
               <Suspense fallback={<p role="status">Loading page…</p>}>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />

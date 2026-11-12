@@ -47,6 +47,27 @@ test("production serves bundled assets, adds security headers, and marks the ses
     );
     assert.match(html.headers.get("strict-transport-security")!, /max-age=/);
     const text = await html.text();
+    assert.match(text, /Six stages/);
+    assert.match(text, /One clear pipeline/);
+    for (const route of ["/product", "/pricing", "/contact"]) {
+      const page = await fetch(`http://localhost:3220${route}`);
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /<main id="main-content"/);
+    }
+    const app = await fetch("http://localhost:3220/app");
+    assert.equal(app.status, 200);
+    assert.equal(app.headers.get("x-robots-tag"), "noindex, nofollow");
+    assert.match(await app.text(), /id="root"/);
+    assert.equal(
+      (await fetch("http://localhost:3220/missing-page")).status,
+      404,
+    );
+    assert.equal(
+      (await fetch("http://localhost:3220/sitemap.xml")).headers.get(
+        "content-type",
+      ),
+      "application/xml",
+    );
     const asset = text.match(/src="(\/assets\/[^"]+\.js)"/);
     assert.ok(asset);
     assert.equal((await fetch(`http://localhost:3220${asset[1]}`)).status, 200);

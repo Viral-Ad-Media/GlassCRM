@@ -13,7 +13,6 @@ export default defineConfig({
             "--disable-dev-shm-usage",
             "--disable-gpu",
             "--no-zygote",
-            "--single-process",
           ],
         }
       : {},

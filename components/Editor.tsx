@@ -27,7 +27,7 @@ export function Editor({
         if (!busy) close();
       }}
       aria-labelledby="editor-title"
-      className="card w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-auto backdrop:bg-black/40"
+      className="card w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-auto backdrop:bg-overlay"
     >
       <form
         className="space-y-3"
@@ -142,7 +142,7 @@ export function Editor({
                   </option>
                   {data.leads.map((l) => (
                     <option key={l.id} value={l.id}>
-                      {l.name} — {l.company}
+                      {l.name}, {l.company}
                     </option>
                   ))}
                 </select>
@@ -193,7 +193,12 @@ export function Editor({
           <button className="btn" disabled={busy}>
             {busy ? "Saving…" : "Save"}
           </button>
-          <button className="btn" type="button" disabled={busy} onClick={close}>
+          <button
+            className="btn btn-quiet"
+            type="button"
+            disabled={busy}
+            onClick={close}
+          >
             Cancel
           </button>
         </div>

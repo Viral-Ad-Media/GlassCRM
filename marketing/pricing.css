@@ -1,0 +1,49 @@
+/* Hallmark v2.0.0 | GlassCRM | modern-minimal | Coral | pricing: private-preview access ledger | signature: oversized access statement | shared chrome */
+/* Critique: published pricing is absent; honest access terms carry the page instead of speculative plan tiers. */
+.pricing-access {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--gap-columns);
+  align-items: start;
+}
+
+.pricing-access h2 {
+  margin: 0;
+  font-size: var(--text-section);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.12;
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.pricing-access p {
+  max-width: 55ch;
+  margin: 0 0 var(--space-lg);
+}
+
+.pricing-access p:last-child {
+  margin-bottom: 0;
+  color: var(--color-muted);
+}
+
+.pricing-product-link {
+  display: inline-block;
+  margin-top: var(--space-xl);
+}
+
+.pricing-page :is(a, summary):focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.pricing-page :is(a, summary):active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 760px) {
+  .pricing-access {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-xl);
+  }
+}

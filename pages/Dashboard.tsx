@@ -70,7 +70,7 @@ export default function Dashboard() {
                 <XAxis dataKey="date" minTickGap={40} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill="#2563eb" />
+                <Bar dataKey="value" fill="var(--color-accent-2)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -93,7 +93,7 @@ export default function Dashboard() {
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="name" width={100} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#2563eb" />
+                <Bar dataKey="value" fill="var(--color-accent-2)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
