@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { defaultSettings, type Snapshot } from "./shared";
+import { defaultSettings, type Snapshot, type SessionProfile } from "./shared";
 export async function api<T>(
   path: string,
   method = "GET",
@@ -32,6 +32,7 @@ type Context = {
   setSearch: (value: string) => void;
   mutate: (path: string, method: string, value?: unknown) => Promise<void>;
   email: string;
+  profile: SessionProfile;
   logout: () => Promise<void>;
 };
 const Workspace = createContext<Context | null>(null);
@@ -42,6 +43,8 @@ export const useWorkspace = () => {
 };
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<SessionProfile | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [checking, setChecking] = useState(true);
   const [data, setData] = useState<Snapshot>({
     leads: [],
@@ -56,6 +59,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     let active = true;
     const expired = () => {
       setEmail(null);
+      setProfile(null);
       setData({ leads: [], deals: [], settings: defaultSettings, events: [] });
     };
     window.addEventListener("session-expired", expired);
@@ -65,9 +69,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         if (session.error)
           throw new Error(session.error.message ?? "Unable to check session");
         if (!session.data) return;
-        const snapshot = await api<Snapshot>("workspace");
+        const [snapshot, identity] = await Promise.all([
+          api<Snapshot>("workspace"),
+          api<SessionProfile>("session"),
+        ]);
         if (active) {
           setData(snapshot);
+          setProfile(identity);
           setEmail(session.data.user.email);
         }
       } catch (e) {
@@ -100,7 +108,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         Loading workspace…
       </p>
     );
-  if (!email)
+  if (!email || !profile)
     return (
       <main className="login-page min-h-screen grid place-items-center p-4">
         <form
@@ -114,13 +122,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               const session = await authClient.signIn.email({
                 email: String(form.get("email")).trim().toLowerCase(),
                 password: String(form.get("password")),
+                rememberMe: form.get("rememberMe") === "on",
               });
               if (session.error)
                 throw new Error(
                   session.error.message ?? "Invalid email or password",
                 );
               if (!session.data) throw new Error("Sign in failed");
-              setData(await api<Snapshot>("workspace"));
+              const [snapshot, identity] = await Promise.all([
+                api<Snapshot>("workspace"),
+                api<SessionProfile>("session"),
+              ]);
+              setData(snapshot);
+              setProfile(identity);
+              setShowPassword(false);
               setEmail(session.data.user.email);
             } catch (e) {
               setError((e as Error).message);
@@ -141,15 +156,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             Email
             <input name="email" type="email" autoComplete="username" required />
           </label>
-          <label className="block">
-            Password
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <div>
+            <label className="block" htmlFor="workspace-password">
+              Password
+            </label>
+            <div className="password-control">
+              <input
+                id="workspace-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                aria-controls="workspace-password"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((value) => !value)}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="flex items-center gap-3 min-h-11 cursor-pointer">
+              <input
+                type="checkbox"
+                name="rememberMe"
+                aria-describedby="remember-description"
+              />
+              Remember me
+            </label>
+            <p id="remember-description" className="text-sm">
+              Stay signed in across browser restarts for up to 8 hours. Use only
+              on a trusted device.
+            </p>
+          </div>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -171,6 +215,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       value={{
         data,
         email,
+        profile,
         search,
         setSearch,
         mutate: async (path, method, value) => {
@@ -181,6 +226,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           if (result.error)
             throw new Error(result.error.message ?? "Sign out failed");
           setEmail(null);
+          setProfile(null);
+          setShowPassword(false);
           setSearch("");
           setData({
             leads: [],

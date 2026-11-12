@@ -18,15 +18,18 @@ export class Store {
       [randomUUID(), action, new Date().toISOString()],
     );
   }
-  async authorize(userId: string) {
-    return (
-      (
-        await this.pool.query(
-          "SELECT 1 FROM crm_administrator WHERE user_id=$1",
-          [userId],
-        )
-      ).rowCount === 1
+  async role(userId: string): Promise<"superadmin" | "administrator" | null> {
+    const result = await this.pool.query<{
+      role: "superadmin" | "administrator" | null;
+    }>(
+      `SELECT CASE WHEN EXISTS(SELECT 1 FROM crm_superadmins WHERE user_id=$1) THEN 'superadmin'
+       WHEN EXISTS(SELECT 1 FROM crm_administrator WHERE user_id=$1) THEN 'administrator' ELSE NULL END AS role`,
+      [userId],
     );
+    return result.rows[0]?.role ?? null;
+  }
+  async authorize(userId: string) {
+    return (await this.role(userId)) !== null;
   }
   async snapshot(): Promise<Snapshot> {
     const [leads, deals, settings, events] = await Promise.all([

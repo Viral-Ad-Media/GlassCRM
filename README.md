@@ -57,13 +57,27 @@ Open **http://localhost:3000** for the public site and **http://localhost:3000/a
 
 The app runs **self-managed Better Auth on the Node server**, backed by Neon PostgreSQL. This is not a separate Neon Managed Auth service. It uses the official Better Auth React client, Node adapter, and PostgreSQL adapter.
 
-Public signup is disabled. Creating a Better Auth user alone does not grant CRM access: every CRM API request also checks the single-administrator membership in `crm_administrator`. The app remains one workspace, with no public registration, team tenancy, or implicit promotion by email.
+Public signup is disabled. Creating a Better Auth user alone does not grant CRM access: every CRM API request also checks administrator membership in `crm_administrator` or an explicit platform grant in `crm_superadmins`. The app remains one workspace, with no public registration or team tenancy. Email matching alone never promotes an existing user.
 
-Sessions last eight hours. Session cookies are HttpOnly and SameSite=Strict, plus Secure in production. Session cookie caching is disabled so sign-out and administrator password resets revoke access immediately. Better Auth owns credential hashing, signed cookies, session records, and the database-backed rate limiter. Incoming IP headers are overwritten from the socket address before reaching Better Auth, preventing browser-spoofed headers from bypassing throttling. Behind Render's proxy, requests may share a conservative login-rate bucket.
+The protected superadmin dashboard is at `/app#/superadmin`. It shows real account and session totals, a paginated user directory, workspace/database health and recent activity. Superadmin API routes require a database-backed role check on every request. Superadmins can revoke sessions for an account; the acting session is preserved and the action is recorded. Auth credential hashes, session tokens and secrets are never included in dashboard responses.
+
+New installations grant their first bootstrap administrator the superadmin role. Existing accounts require explicit operator provisioning; a schema migration never grants the role.
+
+Sessions last at most eight hours between refreshes. The sign-in form includes Show/Hide password and an unchecked-by-default Remember me option. Remembered sign-ins use a persistent cookie for up to eight hours; unchecked sign-ins use a browser-session cookie. Both modes are capped at eight hours on the server. Passwords are never saved in browser storage. Session cookies are HttpOnly and SameSite=Strict, plus Secure in production. Session cookie caching is disabled so sign-out and administrator password resets revoke access immediately. Better Auth owns credential hashing, signed cookies, session records, and the database-backed rate limiter. Incoming IP headers are overwritten from the socket address before reaching Better Auth, preventing browser-spoofed headers from bypassing throttling. Behind Render's proxy, requests may share a conservative login-rate bucket.
 
 Auth endpoints live under `/api/auth/`, including `/sign-in/email`, `/get-session`, and `/sign-out`. The frontend uses `auth-client.ts`; it no longer calls the removed custom `/api/login` or `/api/logout` endpoints.
 
-### Password rotation/recovery
+### Provision a superadmin
+
+Run the operator command with server-only `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CRM_SUPERADMIN_EMAIL`, `CRM_SUPERADMIN_NAME` and `CRM_SUPERADMIN_PASSWORD` supplied through your secure environment:
+
+```bash
+npm run admin:provision-superadmin
+```
+
+This explicit command creates the account if needed, or preserves its existing user ID and workspace membership. It sets the requested display name, hashes the supplied password using Better Auth, grants the superadmin role, revokes that account’s previous sessions and records the provisioning action. Repeating it deliberately resets the password again. The command does not print credentials. Do not run it as part of normal startup or place real credentials in source control.
+
+## Password rotation/recovery
 
 Changing the bootstrap password variable does not change an existing account. To rotate an existing administrator's password, set `CRM_ADMIN_PASSWORD` to the desired new value and run against the intended database:
 

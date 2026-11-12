@@ -7,6 +7,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipeline = lazy(() => import("./pages/Pipeline"));
 const Leads = lazy(() => import("./pages/Leads"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Superadmin = lazy(() => import("./pages/Superadmin"));
 const Billing = lazy(() => import("./pages/Billing"));
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/pipeline" element={<Pipeline />} />
                   <Route path="/leads" element={<Leads />} />
+                  <Route path="/superadmin" element={<Superadmin />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/billing" element={<Billing />} />
                   <Route path="*" element={<Navigate to="/" replace />} />

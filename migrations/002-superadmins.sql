@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS crm_superadmins (
+  user_id TEXT PRIMARY KEY REFERENCES "user"(id) ON DELETE RESTRICT,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
