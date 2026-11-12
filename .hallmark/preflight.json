@@ -1,0 +1,21 @@
+{
+  "scanned": "2026-11-12",
+  "findings": {
+    "fonts": "System sans in index.css:5; no existing brand font",
+    "palette": "Tailwind slate and blue in index.css:5,21; framework defaults, not locked brand values",
+    "motion": "Sidebar transforms; Button transition-all",
+    "spacing": "Tailwind 4 scale",
+    "framework": "React 19, Vite 6, HashRouter, Better Auth, Node API"
+  },
+  "preserve": [
+    "GlassCRM name",
+    "all CRM workflows and API authorization",
+    "existing hash route destinations"
+  ],
+  "introduce": [
+    "public static pages",
+    "Coral semantic tokens with self-hosted Manrope",
+    "dedicated /app entry",
+    "Hallmark audit and screenshots"
+  ]
+}

@@ -5,7 +5,7 @@ export function Header({ openMenu }: { openMenu: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4 flex flex-wrap items-center gap-3">
+    <header className="app-header sticky top-0 z-20 border-b border-line bg-canvas p-4 flex flex-wrap items-center gap-3">
       <button
         className="btn md:hidden"
         onClick={openMenu}
@@ -16,7 +16,7 @@ export function Header({ openMenu }: { openMenu: () => void }) {
         ☰
       </button>
       <h1 className="font-semibold flex-1">{data.settings.workspaceName}</h1>
-      <label className="w-full sm:w-60">
+      <label className="w-full sm:w-60 text-sm">
         Search leads and deals
         <input
           aria-label="Search leads and deals"

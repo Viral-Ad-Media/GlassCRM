@@ -102,7 +102,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     );
   if (!email)
     return (
-      <main className="min-h-screen grid place-items-center p-4">
+      <main className="login-page min-h-screen grid place-items-center p-4">
         <form
           className="card w-full max-w-md space-y-4"
           onSubmit={async (event) => {
@@ -129,8 +129,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             }
           }}
         >
+          <a className="login-home" href="/">
+            ← GlassCRM home
+          </a>
           <h1 className="text-2xl font-semibold">Sign in to GlassCRM</h1>
-          <p>Use the workspace administrator account.</p>
+          <p>
+            Use the workspace administrator account. Access is currently by
+            invitation.
+          </p>
           <label className="block">
             Email
             <input name="email" type="email" autoComplete="username" required />
@@ -152,6 +158,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           <button disabled={busy} className="btn">
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          <p className="text-sm">
+            <a className="underline" href="/contact">
+              Need workspace access?
+            </a>
+          </p>
         </form>
       </main>
     );

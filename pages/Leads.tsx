@@ -57,7 +57,11 @@ export default function Leads() {
         <button className="btn" onClick={() => setEditor("new")}>
           Add lead
         </button>
-        <button className="btn" onClick={exportCsv} disabled={!filtered.length}>
+        <button
+          className="btn btn-quiet"
+          onClick={exportCsv}
+          disabled={!filtered.length}
+        >
           Export filtered leads
         </button>
       </div>
@@ -74,7 +78,11 @@ export default function Leads() {
           {error}
         </p>
       )}
-      <div className="card overflow-x-auto">
+      <div
+        className="card leads-table overflow-x-auto"
+        tabIndex={0}
+        aria-label="Scrollable leads table"
+      >
         <table className="w-full text-left">
           <caption className="sr-only">Workspace leads</caption>
           <thead>
@@ -90,10 +98,7 @@ export default function Leads() {
           </thead>
           <tbody>
             {filtered.slice((current - 1) * 20, current * 20).map((l) => (
-              <tr
-                key={l.id}
-                className="border-t border-slate-200 dark:border-slate-700"
-              >
+              <tr key={l.id} className="border-t border-line">
                 <td className="p-3">{l.name}</td>
                 <td className="p-3">{l.company}</td>
                 <td className="p-3">{l.status}</td>
@@ -102,14 +107,14 @@ export default function Leads() {
                 <td className="p-3">
                   <div className="flex gap-2">
                     <button
-                      className="btn"
+                      className="btn btn-quiet"
                       onClick={() => setEditor(l)}
                       aria-label={`Edit ${l.name}`}
                     >
                       Edit
                     </button>
                     <button
-                      className="btn"
+                      className="btn btn-danger"
                       disabled={busy}
                       aria-label={`Delete ${l.name}`}
                       onClick={async () => {
@@ -144,17 +149,17 @@ export default function Leads() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="btn"
+          className="btn btn-quiet"
           disabled={current === 1}
           onClick={() => setPage(current - 1)}
         >
           Previous
         </button>
         <span>
-          Page {current} of {pages} · {filtered.length} leads
+          Page {current} of {pages}, {filtered.length} leads
         </span>
         <button
-          className="btn"
+          className="btn btn-quiet"
           disabled={current === pages}
           onClick={() => setPage(current + 1)}
         >

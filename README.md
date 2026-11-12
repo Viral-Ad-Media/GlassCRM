@@ -2,6 +2,22 @@
 
 GlassCRM is a self-hosted CRM for one administrator workspace, built with React, TypeScript, Node.js, **Neon PostgreSQL**, and **Better Auth**. Leads, deals, settings, activity, users, sessions, and login throttling all live in PostgreSQL. No runtime SQLite database or Render disk is required.
 
+## Public website and workspace
+
+The public website is prerendered HTML at `/`, `/product`, `/pricing`, and `/contact`. Navigation, FAQ disclosures, product images, and email links work without JavaScript. `/app` opens the authenticated CRM. Existing `/#/pipeline`, `/#/leads`, and other workspace bookmarks redirect to `/app` while preserving the hash destination.
+
+Marketing pages use shared React templates in `marketing/`, rendered at build time by `scripts/prerender.tsx`. The public entry loads a small legacy-link redirect script rather than the CRM bundle. The protected app, Better Auth, and API authorization remain separate. The contact action opens a mail draft; it does not submit a form or provision an account.
+
+`npm run build` produces the public pages, workspace bundle, sitemap, and robots file. Set `PUBLIC_SITE_URL` to the public origin when building for another host; otherwise `RENDER_EXTERNAL_URL` or `https://glasscrm.onrender.com` is used for canonical URLs. Never put credentials in this variable.
+
+The SaaS marketing surface is ready for the next stage. The backend still has **one administrator workspace**. Tenant-scoped data and authorization, invitations, team roles, public registration, subscription enforcement, and payment processing must be implemented before offering a multi-tenant service. The public pages state these preview limits and publish no unapproved prices.
+
+## UI and UX
+
+The interface follows a shared warm-paper palette, self-hosted Manrope typography, visible keyboard focus, reduced-motion preferences, and quieter secondary and destructive actions. Static pages have mobile navigation, semantic landmarks, route metadata and canonical links. Product images are captures of the real app using isolated example records, with detail captures for phones. The workspace preserves every existing workflow and route.
+
+See [the UI/UX audit](docs/UI_UX_AUDIT.md) for Hallmark findings and validation, and [design.md](design.md) for the design system. Font assets retain their [SIL Open Font License](public/fonts/OFL.txt).
+
 ## Local setup
 
 Requirements: Node.js 24, npm, and a PostgreSQL connection string. Neon pooled connections are supported; use a separate Neon development branch for local work.
@@ -33,7 +49,7 @@ npm run dev:server
 npm run dev
 ```
 
-Open **http://localhost:3000**. Vite proxies `/api` to the backend on port 3001. Use the configured hostname consistently: write requests from other origins are rejected. The backend applies additive schema migrations before accepting connections, then creates the administrator only if one does not already exist.
+Open **http://localhost:3000** for the public site and **http://localhost:3000/app** for the workspace. Vite proxies `/api` to the backend on port 3001. Use the configured hostname consistently: write requests from other origins are rejected. The backend applies additive schema migrations before accepting connections, then creates the administrator only if one does not already exist.
 
 `.env` files are ignored by Git. Never prefix `DATABASE_URL`, `BETTER_AUTH_SECRET`, or administrator credentials with `VITE_`; these values belong only on the server. No Gemini key is needed.
 

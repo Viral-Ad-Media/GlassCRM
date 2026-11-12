@@ -1,33 +1,220 @@
+/* Hallmark · shape: workspace · genre: modern-minimal · theme: Coral adapted to Manrope · job: manage sales · hero: app · nav: sidebar · footer: none · imagery: real records · signature: six-stage pipeline · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 · weakest: density, restrained secondary record actions and compact pipeline columns */
 @import "tailwindcss";
+@import "./styles/fonts.css";
+@import "./styles/tokens.css";
 @custom-variant dark (&:where(.dark, .dark *));
+@theme inline {
+  --font-sans: var(--font-body);
+  --color-canvas: var(--color-paper);
+  --color-panel: var(--color-cotton);
+  --color-content: var(--color-ink);
+  --color-subtle: var(--color-paper-3);
+  --color-line: var(--color-rule);
+  --color-danger: var(--color-error);
+  --color-overlay: oklch(15% 0.01 40 / 0.45);
+}
+.dark {
+  color-scheme: dark;
+  --color-paper: var(--dark-paper);
+  --color-cotton: var(--dark-cotton);
+  --color-paper-3: var(--dark-paper-3);
+  --color-ink: var(--dark-ink);
+  --color-muted: var(--dark-muted);
+  --color-rule: var(--dark-rule);
+  --color-focus: var(--dark-focus);
+  --color-accent-2: var(--dark-accent-2);
+  --color-error: var(--dark-error);
+}
 @layer base {
+  html,
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased;
+    overflow-x: clip;
+  }
+  html {
+    scrollbar-color: var(--color-muted) var(--color-paper);
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  input,
+  textarea {
+    caret-color: var(--color-accent-2);
+  }
+  body {
+    @apply bg-canvas text-content antialiased;
+    font-family: var(--font-body);
   }
   input:not([type="checkbox"]),
   select,
   textarea {
-    @apply block w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 mt-1 text-base;
+    @apply block w-full rounded-md border border-line bg-panel px-3 py-2 mt-1 text-base;
+    min-height: 44px;
   }
   button,
   a,
   input,
   select,
   summary {
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600;
+    outline-color: var(--color-focus);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
   }
   button:disabled {
     @apply opacity-50 cursor-not-allowed;
   }
+  button:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+  h2 {
+    letter-spacing: var(--tracking-display);
+    text-wrap: balance;
+  }
+  th {
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  td {
+    font-size: var(--text-sm);
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr:hover {
+    background: var(--color-paper-3);
+  }
+  summary {
+    min-height: 44px;
+    align-content: center;
+  }
 }
 @layer components {
   .card {
-    @apply bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-5;
+    @apply bg-panel rounded-lg border border-line p-5;
   }
   .btn {
-    @apply inline-flex items-center justify-center rounded-md bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 px-4 py-2 text-sm font-medium;
+    @apply inline-flex items-center justify-center rounded-md bg-content text-canvas px-4 py-2 text-sm font-medium;
+    min-height: 44px;
+    transition: transform var(--dur-micro) var(--ease-out);
+  }
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn-quiet {
+    @apply bg-transparent text-content border border-line;
+  }
+  .btn-danger {
+    @apply bg-transparent text-danger;
   }
   .error {
-    @apply text-red-700 dark:text-red-300;
+    @apply text-danger;
+  }
+}
+.app-header {
+  background: var(--color-paper);
+}
+.app-sidebar {
+  background: var(--color-paper);
+  border-right: 1px solid var(--color-rule);
+}
+.app-sidebar nav a[aria-current="page"] {
+  box-shadow: inset 3px 0 var(--color-accent-2);
+  padding-left: var(--space-sm);
+}
+.pipeline-board > div {
+  gap: var(--space-md);
+}
+.pipeline-column {
+  width: 248px;
+  padding: var(--space-sm);
+  background: var(--color-paper-3);
+  border-radius: var(--radius-card);
+}
+.pipeline-column article {
+  padding: var(--space-md);
+}
+.pipeline-column label {
+  color: var(--color-muted);
+}
+.pipeline-column select {
+  color: var(--color-ink);
+}
+.pipeline-column article > p:first-of-type {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.pipeline-empty {
+  background: transparent;
+  border-style: dashed;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+.login-page {
+  background: var(--color-paper);
+}
+.login-page form {
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-card);
+}
+.login-page .login-home {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  text-underline-offset: 4px;
+}
+.leads-table {
+  position: relative;
+}
+.leads-table td:first-child,
+.leads-table th:first-child {
+  position: sticky;
+  left: -20px;
+  background: var(--color-cotton);
+  z-index: 1;
+}
+.leads-table td:last-child,
+.leads-table th:last-child {
+  position: sticky;
+  right: -20px;
+  background: var(--color-cotton);
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 480px) {
+  .login-page form {
+    padding: var(--space-lg);
+  }
+  .leads-table {
+    padding: var(--space-sm);
+  }
+  .leads-table td:first-child,
+  .leads-table th:first-child {
+    left: -12px;
+  }
+  .leads-table td:last-child,
+  .leads-table th:last-child {
+    position: static;
+  }
+}
+@layer base {
+  input:not([type="checkbox"]),
+  select,
+  textarea {
+    border-color: var(--color-muted);
   }
 }

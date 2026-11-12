@@ -31,7 +31,7 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
     <>
       {open && (
         <button
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          className="fixed inset-0 bg-overlay z-30 md:hidden"
           aria-label="Close navigation"
           onClick={close}
         />
@@ -41,7 +41,7 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
         inert={small && !open}
         id="workspace-navigation"
         aria-label="Workspace navigation"
-        className={`fixed inset-y-0 left-0 w-64 card rounded-none z-40 flex flex-col transition-transform ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`app-sidebar fixed inset-y-0 left-0 w-64 card rounded-none z-40 flex flex-col transition-transform ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         <div className="flex justify-between">
           <span className="text-xl font-bold">GlassCRM</span>
@@ -67,7 +67,7 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
               end
               onClick={close}
               className={({ isActive }) =>
-                `block p-3 rounded ${isActive ? "bg-slate-200 dark:bg-slate-700 font-semibold" : "hover:bg-slate-100 dark:hover:bg-slate-800"}`
+                `block p-3 rounded ${isActive ? "bg-subtle font-semibold" : "hover:bg-subtle dark:hover:bg-content"}`
               }
             >
               {label}
@@ -80,7 +80,7 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
           </p>
         )}
         <button
-          className="btn"
+          className="btn btn-quiet"
           disabled={busy}
           onClick={async () => {
             setBusy(true);

@@ -4,7 +4,7 @@ test("sign-in, lead and deal CRUD, persistence, settings, chart layout, CSV and 
 }) => {
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByLabel("Email", { exact: true }).fill("browser@example.com");
   await page
     .getByLabel("Password", { exact: true })
@@ -34,7 +34,7 @@ test("sign-in, lead and deal CRUD, persistence, settings, chart layout, CSV and 
   await dialog.getByLabel("Deal title").fill("Browser contract");
   await dialog
     .getByLabel("Lead", { exact: true })
-    .selectOption({ label: "Browser Alice — Acme" });
+    .selectOption({ label: "Browser Alice, Acme" });
   await dialog.getByLabel("Value (USD)").fill("12345.67");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(

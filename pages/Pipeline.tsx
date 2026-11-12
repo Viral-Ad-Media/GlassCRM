@@ -48,7 +48,11 @@ export default function Pipeline() {
           {error}
         </p>
       )}
-      <div className="overflow-x-auto pb-4" aria-label="Sales pipeline">
+      <div
+        className="pipeline-board overflow-x-auto pb-4"
+        tabIndex={0}
+        aria-label="Sales pipeline"
+      >
         <div className="flex gap-4 w-max">
           {stages.map((stage) => {
             const deals = data.deals.filter(
@@ -61,7 +65,7 @@ export default function Pipeline() {
             return (
               <section
                 key={stage.id}
-                className="w-72 flex flex-col max-h-[70vh]"
+                className="pipeline-column flex flex-col max-h-[70vh]"
                 aria-label={`${stage.name} deals`}
                 onDragOver={(e) => {
                   if (dragged && !busy) e.preventDefault();
@@ -99,7 +103,7 @@ export default function Pipeline() {
                         {deal.title}
                       </h4>
                       <p>
-                        {currency(deal.value)} · {deal.probability}%
+                        {currency(deal.value)} / {deal.probability}%
                       </p>
                       <p className="text-sm">
                         {data.leads.find((l) => l.id === deal.leadId)?.name}
@@ -125,14 +129,14 @@ export default function Pipeline() {
                       </label>
                       <div className="flex gap-2">
                         <button
-                          className="btn"
+                          className="btn btn-quiet"
                           aria-label={`Edit ${deal.title}`}
                           onClick={() => setEditor(deal)}
                         >
                           Edit
                         </button>
                         <button
-                          className="btn"
+                          className="btn btn-danger"
                           disabled={busy}
                           aria-label={`Delete ${deal.title}`}
                           onClick={async () => {
@@ -158,7 +162,9 @@ export default function Pipeline() {
                       </div>
                     </article>
                   ))}
-                  {!deals.length && <p className="card">No deals</p>}
+                  {!deals.length && (
+                    <p className="card pipeline-empty">No deals</p>
+                  )}
                 </div>
               </section>
             );

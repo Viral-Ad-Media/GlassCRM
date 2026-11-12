@@ -1,0 +1,27 @@
+[
+  {
+    "shape": "narrative-workflow",
+    "theme": "coral",
+    "axes": ["light", "grotesk-sans", "warm"],
+    "hero": "Banner",
+    "nav": "edge-aligned",
+    "footer": "letter-close",
+    "imagery": "real-product-captures",
+    "photos": [],
+    "entry": "marketing/Home.tsx",
+    "fingerprint": "six-stage-pipeline-on-warm-paper",
+    "sections": [
+      "pipeline",
+      "workflow",
+      "reporting",
+      "questions",
+      "access",
+      "footer"
+    ],
+    "signature": "real six-stage pipeline",
+    "waived": ["77"],
+    "prompt": "GlassCRM public SaaS marketing pages and existing workspace UI/UX audit",
+    "date": "2026-11-12",
+    "mode": "build"
+  }
+]
